@@ -23,7 +23,7 @@ int gameState = MENU;
 // ==========================================
 
 Serial port;
-int serialPortIndex = 2;
+int serialPortIndex = 0;
 
 // ==========================================
 // 音樂設定
@@ -32,9 +32,9 @@ int serialPortIndex = 2;
 SoundFile[] songs;
 
 String[] songNames = {
-  "Song 1 - Easy Rhythm",
-  "Song 2 - Normal Rhythm",
-  "Song 3 - Hard Rhythm"
+  "Sport Electro",
+  "Cookie Run Music",
+  "HYPERPOP type Beat"
 };
 
 String[] songFiles = {
@@ -85,6 +85,12 @@ int gameDurationMs = 60000;
 int musicStartTime = 0;
 
 boolean musicStarted = false;
+
+// ==========================================
+// 初始反應時間設定
+// ==========================================
+
+int initialReactionTimeMs = 500;
 
 // ==========================================
 // 難度設定
@@ -176,7 +182,7 @@ void setup() {
 
   size(600, 680);
 
-  surface.setTitle("JOYSTICK RHYTHM MASTER");
+  surface.setTitle("Music Game");
 
   textAlign(CENTER, CENTER);
 
@@ -250,24 +256,21 @@ void draw() {
 void drawMenu() {
 
   fill(255);
-
   textSize(34);
 
   text(
-    "JOYSTICK RHYTHM MASTER",
+    "MUSIC GAME",
     width / 2,
     100
   );
 
   // 歌曲選擇
   textSize(22);
-
   fill(255, 210, 80);
 
   text("SELECT SONG", width / 2, 210);
 
   fill(255);
-
   textSize(20);
 
   text(
@@ -277,7 +280,6 @@ void drawMenu() {
   );
 
   textSize(15);
-
   fill(160, 180, 220);
 
   text(
@@ -288,7 +290,6 @@ void drawMenu() {
 
   // 難度選擇
   fill(255, 210, 80);
-
   textSize(22);
 
   text(
@@ -298,7 +299,6 @@ void drawMenu() {
   );
 
   fill(255);
-
   textSize(24);
 
   text(
@@ -308,7 +308,6 @@ void drawMenu() {
   );
 
   textSize(15);
-
   fill(160, 180, 220);
 
   text(
@@ -319,21 +318,19 @@ void drawMenu() {
 
   // 操作說明
   fill(255);
-
   textSize(19);
 
   text(
-    "PRESS SELECT TO START",
+    "PRESS JOYSTICK OR 'ENTER' TO START",
     width / 2,
     550
   );
 
   textSize(14);
-
   fill(150, 170, 200);
 
   text(
-    "USE JOYSTICK TO PLAY",
+    "USE JOYSTICK OR ARROW KEYS TO PLAY",
     width / 2,
     590
   );
@@ -343,7 +340,6 @@ void drawMenu() {
     width / 2,
     620
   );
-
 }
 
 // ==========================================
@@ -370,18 +366,16 @@ void startGame() {
   // 產生箭頭
   generateNotes();
 
-  // 立即開始音樂，不再等待 GET READY
+  // 立即開始音樂
   musicStartTime = millis();
 
   musicStarted = true;
 
   gameState = PLAYING;
 
-  // 立即播放歌曲
   songs[songIndex].play();
 
   sendArduino("LED_ON");
-
 }
 
 // ==========================================
@@ -410,8 +404,8 @@ void generateNotes() {
 
   } else {
 
-    // 困難：每半拍一次
-    stepTime = beatTime * 0.5;
+    // 困難：每 0.75 拍一次
+    stepTime = beatTime * 0.75;
 
   }
 
@@ -420,9 +414,14 @@ void generateNotes() {
 
   int patternIndex = 0;
 
+  // 第一個箭頭的目標時間
+  float firstTargetTime =
+    initialReactionTimeMs +
+    approachTimes[difficulty];
+
   // 只產生前 60 秒的箭頭
   for (
-    float target = songOffsetMs[songIndex];
+    float target = firstTargetTime;
     target < gameDurationMs;
     target += stepTime
   ) {
@@ -439,9 +438,7 @@ void generateNotes() {
     if (patternIndex >= patternLength) {
       patternIndex = 0;
     }
-
   }
-
 }
 
 // ==========================================
@@ -478,7 +475,6 @@ void drawGame() {
       break;
 
     }
-
   }
 
   // 60 秒結束，而且所有箭頭都已判定
@@ -490,7 +486,6 @@ void drawGame() {
     endGame();
 
   }
-
 }
 
 // ==========================================
@@ -502,7 +497,6 @@ void drawInformation(int songElapsed) {
   fill(255);
 
   textAlign(LEFT, CENTER);
-
   textSize(18);
 
   text(
@@ -560,19 +554,18 @@ void drawInformation(int songElapsed) {
   );
 
   textAlign(CENTER, CENTER);
-
 }
 
 // ==========================================
 // 繪製四個軌道
 // ==========================================
 
+
 void drawLanes() {
 
   for (int i = 0; i < 4; i++) {
 
     stroke(70, 80, 110);
-
     strokeWeight(2);
 
     line(
@@ -585,7 +578,6 @@ void drawLanes() {
     noStroke();
 
     fill(laneColors[i]);
-
     textSize(17);
 
     text(
@@ -593,12 +585,10 @@ void drawLanes() {
       laneX[i],
       135
     );
-
   }
 
   // 判定線
   stroke(255);
-
   strokeWeight(3);
 
   line(
@@ -609,9 +599,7 @@ void drawLanes() {
   );
 
   noStroke();
-
   fill(255);
-
   textSize(14);
 
   text(
@@ -620,7 +608,17 @@ void drawLanes() {
     judgmentY + 55
   );
 
+  // 離開遊戲提示
+  fill(160, 170, 190);
+  textSize(15);
+
+  text(
+    "PRESS JOYSTICK OR 'ENTER' TO LEAVE",
+    width / 2,
+    judgmentY + 80
+  );
 }
+
 
 // ==========================================
 // 繪製箭頭
@@ -655,9 +653,7 @@ void drawNotes(int elapsed) {
       y,
       n.lane
     );
-
   }
-
 }
 
 // ==========================================
@@ -689,9 +685,7 @@ void drawDirectionalArrow(
   rotate(angle);
 
   stroke(laneColors[direction]);
-
   strokeWeight(9);
-
   strokeCap(ROUND);
 
   // 箭頭主體
@@ -718,7 +712,6 @@ void drawDirectionalArrow(
   );
 
   popMatrix();
-
 }
 
 // ==========================================
@@ -761,11 +754,9 @@ void checkHit(int lane) {
     ) {
 
       closestDifference = difference;
-
       closestNote = n;
 
     }
-
   }
 
   // 沒有可判定的箭頭
@@ -775,7 +766,10 @@ void checkHit(int lane) {
 
   closestNote.judged = true;
 
+  // ==========================================
   // PERFECT
+  // ==========================================
+
   if (
     closestDifference <=
     perfectWindows[difficulty]
@@ -814,10 +808,12 @@ void checkHit(int lane) {
       sendArduino("SFX_PERFECT");
 
     }
-
   }
 
-  // GOOD
+  // ==========================================
+  // GREAT（原本的 GOOD）
+  // ==========================================
+
   else if (
     closestDifference <=
     goodWindows[difficulty]
@@ -829,13 +825,21 @@ void checkHit(int lane) {
 
     score += 70;
 
-    addJudgment(lane, "GOOD");
+    addJudgment(lane, "GREAT");
+
+    addBonusText(
+      lane,
+      "+70"
+    );
 
     sendArduino("SFX_GOOD");
 
   }
 
-  // BAD
+  // ==========================================
+  // GOOD（原本的 BAD）
+  // ==========================================
+
   else {
 
     badCount++;
@@ -844,13 +848,18 @@ void checkHit(int lane) {
 
     score += 30;
 
-    addJudgment(lane, "BAD");
+    addJudgment(lane, "GOOD");
+
+    addBonusText(
+      lane,
+      "+30"
+    );
 
     sendArduino("SFX_BAD");
 
   }
 
-}
+} // ★ 修復：checkHit() 在這裡正確結束
 
 // ==========================================
 // MISS 判定
@@ -880,12 +889,16 @@ void checkMiss(int elapsed) {
         "MISS"
       );
 
+      // MISS 不加分，顯示 +0
+      addBonusText(
+        n.lane,
+        "+0"
+      );
+
       sendArduino("SFX_MISS");
 
     }
-
   }
-
 }
 
 // ==========================================
@@ -904,12 +917,12 @@ void addJudgment(
     judgmentColor =
       color(255, 215, 70);
 
-  } else if (label.equals("GOOD")) {
+  } else if (label.equals("GREAT")) {
 
     judgmentColor =
       color(80, 230, 140);
 
-  } else if (label.equals("BAD")) {
+  } else if (label.equals("GOOD")) {
 
     judgmentColor =
       color(255, 150, 60);
@@ -929,7 +942,6 @@ void addJudgment(
       judgmentColor
     )
   );
-
 }
 
 // ==========================================
@@ -953,7 +965,6 @@ void drawJudgmentTexts() {
     if (elapsed > 800) {
 
       judgmentTexts.remove(i);
-
       continue;
 
     }
@@ -978,13 +989,11 @@ void drawJudgmentTexts() {
       j.x,
       y
     );
-
   }
-
 }
 
 // ==========================================
-// Combo 加分文字
+// 加分文字
 // ==========================================
 
 void addBonusText(
@@ -999,12 +1008,12 @@ void addBonusText(
       label
     )
   );
-
 }
 
 // ==========================================
 // 顯示加分動畫
 // ==========================================
+
 
 void drawBonusTexts() {
 
@@ -1023,7 +1032,6 @@ void drawBonusTexts() {
     if (elapsed > 800) {
 
       bonusTexts.remove(i);
-
       continue;
 
     }
@@ -1034,12 +1042,28 @@ void drawBonusTexts() {
     float y =
       b.y - elapsed * 0.04;
 
-    fill(
-      255,
-      220,
-      80,
-      alpha
-    );
+    // 根據評級設定加分文字顏色
+    if (b.label.equals("+0")) {
+
+      // MISS：紅色
+      fill(255, 70, 70, alpha);
+
+    } else if (b.label.equals("+30")) {
+
+      // GOOD：橘色
+      fill(255, 150, 60, alpha);
+
+    } else if (b.label.equals("+70")) {
+
+      // GREAT：綠色
+      fill(80, 230, 140, alpha);
+
+    } else {
+
+      // PERFECT：黃色
+      fill(255, 215, 70, alpha);
+
+    }
 
     textSize(17);
 
@@ -1048,10 +1072,9 @@ void drawBonusTexts() {
       b.x,
       y
     );
-
   }
-
 }
+
 
 // ==========================================
 // 遊戲結束
@@ -1072,7 +1095,6 @@ void endGame() {
   sendArduino("BUZZER_OFF");
 
   gameState = RESULT;
-
 }
 
 // ==========================================
@@ -1084,7 +1106,6 @@ void drawResult() {
   background(20, 24, 40);
 
   fill(255, 215, 70);
-
   textSize(36);
 
   text(
@@ -1094,7 +1115,6 @@ void drawResult() {
   );
 
   fill(255);
-
   textSize(24);
 
   text(
@@ -1130,7 +1150,7 @@ void drawResult() {
   fill(80, 230, 140);
 
   text(
-    "GOOD : " + goodCount,
+    "GREAT : " + goodCount,
     width / 2,
     390
   );
@@ -1138,7 +1158,7 @@ void drawResult() {
   fill(255, 150, 60);
 
   text(
-    "BAD : " + badCount,
+    "GOOD : " + badCount,
     width / 2,
     430
   );
@@ -1152,15 +1172,13 @@ void drawResult() {
   );
 
   fill(255);
-
   textSize(18);
 
   text(
-    "PRESS SELECT TO RETURN",
+    "PRESS JOYSTICK OR 'ENTER' TO RETURN",
     width / 2,
     570
   );
-
 }
 
 // ==========================================
@@ -1186,7 +1204,6 @@ void returnToMenu() {
   bonusTexts.clear();
 
   gameState = MENU;
-
 }
 
 // ==========================================
@@ -1200,7 +1217,6 @@ void sendArduino(String command) {
     port.write(command + "\n");
 
   }
-
 }
 
 // ==========================================
@@ -1239,7 +1255,6 @@ void serialEvent(Serial p) {
     handleSelect();
 
   }
-
 }
 
 // ==========================================
@@ -1289,7 +1304,6 @@ void handleDirection(int lane) {
     checkHit(lane);
 
   }
-
 }
 
 // ==========================================
@@ -1311,7 +1325,6 @@ void handleSelect() {
     returnToMenu();
 
   }
-
 }
 
 // ==========================================
@@ -1343,8 +1356,19 @@ void keyPressed() {
 
     handleSelect();
 
-  }
+  } else if (
+    key == 'r' ||
+    key == 'R'
+  ) {
 
+    // 遊戲進行中按下 R，返回主畫面
+    if (gameState == PLAYING) {
+
+      returnToMenu();
+
+    }
+
+  }
 }
 
 // ==========================================
@@ -1369,7 +1393,6 @@ class Note {
     this.targetTime = targetTime;
 
   }
-
 }
 
 // ==========================================
@@ -1405,7 +1428,6 @@ class JudgmentText {
     startTime = millis();
 
   }
-
 }
 
 // ==========================================
@@ -1436,5 +1458,4 @@ class BonusText {
     startTime = millis();
 
   }
-
 }
